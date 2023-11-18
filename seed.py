@@ -1,24 +1,23 @@
 import json
-from pymongo import MongoClient
 
+from mongoengine.errors import NotUniqueError
 
-myclient = MongoClient("mongodb+srv://Oleksandr:567234@goit.5380vln.mongodb.net/")
-
-db = myclient["hw_web8"]
-collection_authors = db["authors"]
-collection_quotes = db["quotes"]
-
-
-def upload_collection(file_name, Collection):
-    with open(file_name, encoding='utf-8') as file:
-        file_data = json.load(file)
-
-    if isinstance(file_data, list):
-        Collection.insert_many(file_data)
-    else:
-        Collection.insert_one(file_data)
-
+from models import Author, Quote
 
 if __name__ == '__main__':
-    upload_collection('authors.json', collection_authors)
-    upload_collection('quotes.json', collection_quotes)
+    with open('authors.json', encoding='utf-8') as fd:
+        data = json.load(fd)
+        for el in data:
+            try:
+                author = Author(fullname=el.get('fullname').replace('-', ' '), born_date=el.get('born_date'),
+                                born_location=el.get('born_location'), description=el.get('description'))
+                author.save()
+            except NotUniqueError:
+                print(f"Автор вже існує {el.get('fullname')}")
+
+    with open('quotes.json', encoding='utf-8') as fd:
+        data = json.load(fd)
+        for el in data:
+            author, *_ = Author.objects(fullname=el.get('author'))
+            quote = Quote(quote=el.get('quote'), tags=el.get('tags'), author=author)
+            quote.save()
